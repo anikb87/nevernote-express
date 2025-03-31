@@ -1,19 +1,18 @@
-// app.js
-
 const express = require('express');
 const mongoose = require('mongoose');
+const session = require('express-session');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const passport = require('passport');
-const session = require('express-session');
 require('dotenv').config();
+
+const authRoutes = require('./routes/auth');
+const noteRoutes = require('./routes/notes');
 
 const app = express();
 
 // Middleware
 app.use(bodyParser.json());
 
-// CORS Setup
 const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:3001';
 app.use(
   cors({
@@ -22,19 +21,16 @@ app.use(
   })
 );
 
-// Session & Passport
 app.use(
   session({
-    secret: 'yourSecretKey',
+    secret: 'nevernoteSecret',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }, // Set to true if using HTTPS
+    saveUninitialized: false,
+    cookie: { secure: false },
   })
 );
-app.use(passport.initialize());
-app.use(passport.session());
 
-// MongoDB
+// MongoDB Connection
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -44,11 +40,8 @@ mongoose
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
-const authRoutes = require('./routes/auth');
-const noteRoutes = require('./routes/notes');
-
-app.use(authRoutes);
-app.use(noteRoutes);
+app.use('/auth', authRoutes);
+app.use('/notes', noteRoutes);
 
 // Server
 const PORT = process.env.PORT || 3000;
