@@ -1,3 +1,5 @@
+// app.js
+
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
@@ -8,39 +10,31 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://nevernote-react.vercel.app',
-];
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
+// Middleware
 app.use(bodyParser.json());
 
-// Session and passport
+// CORS Setup
+const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:3001';
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+  })
+);
+
+// Session & Passport
 app.use(
   session({
     secret: 'yourSecretKey',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false }, // set to true if using HTTPS + proxy
+    cookie: { secure: false }, // Set to true if using HTTPS
   })
 );
 app.use(passport.initialize());
 app.use(passport.session());
 
-// MongoDB connection
+// MongoDB
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -56,7 +50,7 @@ const noteRoutes = require('./routes/notes');
 app.use(authRoutes);
 app.use(noteRoutes);
 
-// Start server
+// Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
