@@ -10,8 +10,13 @@ const noteRoutes = require('./routes/notes');
 
 const app = express();
 
+const allowedOrigins = [
+  'http://localhost:3000', // Local React app
+  'https://nevernote-react.vercel.app' // Vercel deployed app
+];
+
 app.use(cors({
-  origin: 'http://localhost:3001', // Change to your frontend URL
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(bodyParser.json());
