@@ -1,43 +1,40 @@
 const express = require('express');
 const Note = require('../models/Note');
+const verifyToken = require('../middleware/auth');
+
 const router = express.Router();
 
-const ensureAuthenticated = (req, res, next) => {
-  if (req.session.user) return next();
-  res.status(401).json({ message: 'Unauthorized' });
-};
-
 // Get all notes
-router.get('/notes', ensureAuthenticated, async (req, res) => {
-  const notes = await Note.find({ userId: req.session.user._id });
+router.get('/notes', verifyToken, async (req, res) => {
+  const notes = await Note.find({ userId: req.user.id });
   res.json(notes);
 });
 
 // Create note
-router.post('/notes', ensureAuthenticated, async (req, res) => {
+router.post('/notes', verifyToken, async (req, res) => {
   const { title, content } = req.body;
-  const note = new Note({
-    userId: req.session.user._id,
+  const newNote = new Note({
+    userId: req.user.id,
     title,
     content,
   });
-  await note.save();
-  res.json(note);
+  await newNote.save();
+  res.json(newNote);
 });
 
 // Update note
-router.put('/notes/:id', ensureAuthenticated, async (req, res) => {
+router.put('/notes/:id', verifyToken, async (req, res) => {
   const { title, content } = req.body;
-  const updated = await Note.findByIdAndUpdate(
+  const updatedNote = await Note.findByIdAndUpdate(
     req.params.id,
     { title, content },
     { new: true }
   );
-  res.json(updated);
+  res.json(updatedNote);
 });
 
 // Delete note
-router.delete('/notes/:id', ensureAuthenticated, async (req, res) => {
+router.delete('/notes/:id', verifyToken, async (req, res) => {
   await Note.findByIdAndDelete(req.params.id);
   res.json({ message: 'Note deleted' });
 });
