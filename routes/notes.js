@@ -1,57 +1,74 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const Note = require('../models/Note');
+const authenticateJWT = require('../middleware/authMiddleware');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 
-// Middleware to verify JWT
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) return res.status(401).json({ message: 'Missing token' });
-
-  const token = authHeader.split(' ')[1];
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
-
-    req.user = user;
-    next();
-  });
-};
-
-// Get all notes
-router.get('/', verifyToken, async (req, res) => {
-  const notes = await Note.find({ username: req.user.username });
-  res.json(notes);
+// Get all notes for the authenticated user
+router.get('/notes', authenticateJWT, async (req, res) => {
+  try {
+    const notes = await Note.find({ userId: req.user.userId });
+    res.json(notes);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch notes' });
+  }
 });
 
-// Create note
-router.post('/', verifyToken, async (req, res) => {
+// Create a new note
+router.post('/notes', authenticateJWT, async (req, res) => {
   const { title, content } = req.body;
 
-  const newNote = new Note({
-    username: req.user.username,
-    title,
-    content
-  });
+  try {
+    const newNote = new Note({
+      userId: req.user.userId,
+      title,
+      content
+    });
 
-  await newNote.save();
-  res.json(newNote);
+    await newNote.save();
+    res.status(201).json(newNote);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to create note' });
+  }
 });
 
-// Update note
-router.put('/:id', verifyToken, async (req, res) => {
+// Update a note
+router.put('/notes/:id', authenticateJWT, async (req, res) => {
   const { title, content } = req.body;
-  const updatedNote = await Note.findByIdAndUpdate(req.params.id, { title, content }, { new: true });
-  res.json(updatedNote);
+
+  try {
+    const updatedNote = await Note.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.userId },
+      { title, content },
+      { new: true }
+    );
+
+    if (!updatedNote) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    res.json(updatedNote);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update note' });
+  }
 });
 
-// Delete note
-router.delete('/:id', verifyToken, async (req, res) => {
-  await Note.findByIdAndDelete(req.params.id);
-  res.json({ message: 'Note deleted' });
+// Delete a note
+router.delete('/notes/:id', authenticateJWT, async (req, res) => {
+  try {
+    const deleted = await Note.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.userId
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Note not found' });
+    }
+
+    res.json({ message: 'Note deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete note' });
+  }
 });
 
 module.exports = router;
