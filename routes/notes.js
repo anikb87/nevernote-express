@@ -1,40 +1,55 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const Note = require('../models/Note');
-const verifyToken = require('../middleware/auth');
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
+
+// Middleware to verify JWT
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) return res.status(401).json({ message: 'Missing token' });
+
+  const token = authHeader.split(' ')[1];
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+
+    req.user = user;
+    next();
+  });
+};
 
 // Get all notes
-router.get('/notes', verifyToken, async (req, res) => {
-  const notes = await Note.find({ userId: req.user.id });
+router.get('/', verifyToken, async (req, res) => {
+  const notes = await Note.find({ username: req.user.username });
   res.json(notes);
 });
 
 // Create note
-router.post('/notes', verifyToken, async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   const { title, content } = req.body;
+
   const newNote = new Note({
-    userId: req.user.id,
+    username: req.user.username,
     title,
-    content,
+    content
   });
+
   await newNote.save();
   res.json(newNote);
 });
 
 // Update note
-router.put('/notes/:id', verifyToken, async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   const { title, content } = req.body;
-  const updatedNote = await Note.findByIdAndUpdate(
-    req.params.id,
-    { title, content },
-    { new: true }
-  );
+  const updatedNote = await Note.findByIdAndUpdate(req.params.id, { title, content }, { new: true });
   res.json(updatedNote);
 });
 
 // Delete note
-router.delete('/notes/:id', verifyToken, async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   await Note.findByIdAndDelete(req.params.id);
   res.json({ message: 'Note deleted' });
 });

@@ -4,31 +4,30 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config();
 
+const authRoutes = require('./routes/auth');
+const notesRoutes = require('./routes/notes');
+
 const app = express();
 
+// Middleware
 app.use(bodyParser.json());
+
+// CORS configuration
 app.use(cors({
   origin: ['http://localhost:3000', 'https://nevernote-react.vercel.app'],
-  credentials: true,
+  credentials: true
 }));
 
+// MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useUnifiedTopology: true
 }).then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-const authRoutes = require('./routes/auth');
-const noteRoutes = require('./routes/notes');
+// Routes
+app.use('/auth', authRoutes);
+app.use('/notes', notesRoutes);
 
-app.use(authRoutes);
-app.use(noteRoutes);
-
-app.get('/', (req, res) => {
-  res.send('Hello from NeverNote Backend!');
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
